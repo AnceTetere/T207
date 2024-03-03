@@ -1,0 +1,80 @@
+kopsavilkumi_noKSVT <- function(x) {
+  KSVT_vec <- switch(
+    as.character(kopsNr),
+    "01" = c(1, 2, 3, 4, 5, 6, 7, 8, 9),
+    "23" = c(1, 2, 3, 4, 82, 83),
+    "24" = c(5, 6, 7, 9, 84, 86, 87),
+    "45" = c(1, 2, 82, 83),
+    stop("Kopsavilkuma numurs nav atpazīts.")
+  )
+  
+  # Tiek definēts tukšs BIND_vec vektors, kas pēcāk tiks aizpildīts ar apakštabulām, 
+  # kuras veidosies no KSVT kodu atlases.
+  BIND_vec <- character(0)
+  
+  if (kopsNr == "01" || kopsNr == "23" || kopsNr == "24") {
+    for (i in 1:length(KSVT_vec)) {
+      # Te, lai kods pēcāk nemestu kļūdas, uzreiz pārliecinos, ka saņemtajā datnē vispār ir tādi kodi, 
+      # kas sākas ar KSVT_vec komplektā definēto elementu. Ja nav, paziņo, kurš elements tika meklēts, bet neatrasts.
+      # Lai pēcāk neliktos, ka kaut kas aizmirsts.
+      if ((sum(substr(x$KSVT, 1, nchar(KSVT_vec[i])) == KSVT_vec[i])) == 0) {
+        print(paste0("Datnē nav tādu KSVT kodu, kas sāktos ar ", KSVT_vec[i]))
+      } else {
+        # Ja dotie KSVT kodi datnē ir, tad pārbauda vai elements definēts vienā vai divās zīmēs 
+        # un attiecīgi veido apakštabulas.
+        # Jaunizveidoto apakštabulu nosaukumus kārto BIND_vec
+        if (nchar(KSVT_vec[i]) == 1) {
+          tab_name <- paste0("x", i)
+          BIND_vec <- c(BIND_vec, list(tab_name))
+          assign(tab_name, x[substr(x$KSVT, 1, 1) == KSVT_vec[i], c("B2z", rinda, "KSVT")])
+        } else if (nchar(KSVT_vec[i]) == 2) {
+          tab_name <- paste0("x", i)
+          BIND_vec <- c(BIND_vec, list(tab_name))
+          assign(tab_name, x[substr(x$KSVT, 1, 2) == KSVT_vec[i], c("B2z", rinda, "KSVT")])
+          rm(tab_name)
+        } else {
+          stop("Kaut kas ar KSVT kodiem nav kārtībā.")
+        }
+      }
+    }
+
+    y <- x[0,]
+    
+    for (i in BIND_vec) {
+      y <- rbind(y, get(i))
+      rm(list = i)
+    }      
+    
+    rm(BIND_vec, i)
+    rownames(y) <- NULL
+    #print(paste0("tabula y ir ", kopsNr, ". kopsavilkums. \n"))
+  } else {
+    stop("Kopsavilkuma numurs nav atpazīts")
+  }
+  rm(KSVT_vec, tab_name)
+  
+  #3. Tabulās, kuras rēķinās no KSVT kodiem sarēķini vērtības N 2 zīmēs
+  if(kopsNr == "01" || kopsNr == "23" || kopsNr == "24") {
+    u_B2z <- unique(y$B2z)
+    
+    #Izveido tukšu datu tabulu ar N burtiem 2 zīmēs
+    z <- data.frame(setNames(list(sort(u_B2z), rep("", length(u_B2z))),
+                    c("N", rinda)), stringsAsFactors = FALSE)
+    
+    #Sarēķini rindas vērtības
+    for (i in 1:length(u_B2z)) {
+      z[z$N == u_B2z[i], rinda] <- sum(y[y$B2z == u_B2z[i], rinda])
+      
+      
+    }
+    rm(y, u_B2z, i)
+  }
+  
+  #citreiz, ja KSVT iztrūkst, burti paliek tukši, tāpēc šeit uzspiedīšu viņam N2z komplektu.
+  standard_N2z <- readRDS(paste0(path, "templates_and_vectors//standard_N2z.rds"))
+  z <- data.frame(N = standard_N2z)
+  X_n2z <- merge(z, kops, by = "N", all.x = TRUE)
+  rm(kops, z, tab_name)
+  
+  return(X_n2z)
+}
