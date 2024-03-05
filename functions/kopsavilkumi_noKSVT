@@ -38,6 +38,10 @@ kopsavilkumi_noKSVT <- function(x) {
       }
     }
 
+    
+    # No izejošās datnes x, pārtaisa tukšu datu rāmi, kas sastāv tik no aiļu nosaukumiem,
+    # kuram, sekojot BIND_vec sarakstam, šuj klāt un kopā apakštabulas x1, x2 utt.
+    # Tikko apakštabula piešūta, to izdzēs no saraksta (Global Environment). 
     y <- x[0,]
     
     for (i in BIND_vec) {
@@ -51,30 +55,8 @@ kopsavilkumi_noKSVT <- function(x) {
   } else {
     stop("Kopsavilkuma numurs nav atpazīts")
   }
-  rm(KSVT_vec, tab_name)
+  rm(KSVT_vec)
   
-  #3. Tabulās, kuras rēķinās no KSVT kodiem sarēķini vērtības N 2 zīmēs
-  if(kopsNr == "01" || kopsNr == "23" || kopsNr == "24") {
-    u_B2z <- unique(y$B2z)
-    
-    #Izveido tukšu datu tabulu ar N burtiem 2 zīmēs
-    z <- data.frame(setNames(list(sort(u_B2z), rep("", length(u_B2z))),
-                    c("N", rinda)), stringsAsFactors = FALSE)
-    
-    #Sarēķini rindas vērtības
-    for (i in 1:length(u_B2z)) {
-      z[z$N == u_B2z[i], rinda] <- sum(y[y$B2z == u_B2z[i], rinda])
-      
-      
-    }
-    rm(y, u_B2z, i)
-  }
-  
-  #citreiz, ja KSVT iztrūkst, burti paliek tukši, tāpēc šeit uzspiedīšu viņam N2z komplektu.
-  standard_N2z <- readRDS(paste0(path, "templates_and_vectors//standard_N2z.rds"))
-  z <- data.frame(N = standard_N2z)
-  X_n2z <- merge(z, kops, by = "N", all.x = TRUE)
-  rm(kops, z, tab_name)
-  
-  return(X_n2z)
+  return(N_2z(y))
+  rm(y)
 }
